@@ -1,0 +1,19 @@
+{
+    "name": "250/shared",
+    "description": "Top 250 shared code library.",
+    "authors": [
+        {
+            "name": "Bilge",
+            "email": "bilge@scriptfusion.com"
+        }
+    ],
+    "require": {
+        "php": "^7.1",
+        "scriptfusion/static-class": "^1"
+    },
+    "autoload": {
+        "psr-4": {
+            "ScriptFUSION\\Top250\\Shared\\": "src"
+        }
+    }
+}
