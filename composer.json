@@ -9,7 +9,7 @@
     ],
     "require": {
         "php": "^7.1",
-        "eloquent/enumeration": "^5"
+        "scriptfusion/static-class": "^1"
     },
     "autoload": {
         "psr-4": {
