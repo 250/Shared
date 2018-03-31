@@ -13,6 +13,6 @@ final class Platform
     public const LINUX   = 1 << 1;
     public const MAC     = 1 << 2;
     public const VIVE    = 1 << 3;
-    public const OCCULUS = 1 << 4;
+    public const OCULUS  = 1 << 4;
     public const WMR     = 1 << 5;
 }
