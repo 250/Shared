@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace ScriptFUSION\Top250\Shared;
+namespace ScriptFUSION\Steam250\Shared;
 
 use ScriptFUSION\StaticClass;
 
