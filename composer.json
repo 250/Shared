@@ -9,14 +9,16 @@
     ],
     "require": {
         "php": "^7.1",
-        "nao-pon/flysystem-google-drive": "^1",
+        "nao-pon/flysystem-google-drive": "^1.1.9",
         "athari/yalinqo": "^2",
         "phptype/string": "^1",
+        "symfony/console": "^3",
         "scriptfusion/static-class": "^1"
     },
     "autoload": {
         "psr-4": {
             "ScriptFUSION\\Steam250\\Shared\\": "src"
         }
-    }
+    },
+    "bin": ["bin/250 data"]
 }

@@ -6,12 +6,20 @@ namespace ScriptFUSION\Steam250\Shared\Storage;
 use League\Flysystem\Filesystem;
 use ScriptFUSION\Type\StringType;
 
-class OnlineStorage
+/**
+ * Provides read/write storage that always writes to a dedicated write directory (or subdirectory thereof) and always
+ * reads from a dedicated read directory. Files can be moved from the write directory to the read directory.
+ */
+class ReadWriteStorage
 {
-    public const ROOT_DIR = 'data';
+    private const READ_DIR = 'data';
+    private const WRITE_DIR = 'building...';
 
     private const BASENAME = '$v["basename"]';
     private const FILENAME = '$v["filename"]';
+
+    private const TYPE_FILE = 'file';
+    private const TYPE_DIRECTORY = 'dir';
 
     private $filesystem;
 
@@ -20,18 +28,38 @@ class OnlineStorage
         $this->filesystem = $filesystem;
     }
 
-    public function list(string $directory): array
+    /**
+     * Downloads the specified file or directory contents.
+     *
+     * @param string $filespec File or directory path, separated by slashes ('/').
+     *
+     * @return bool True if all files were downloaded successfully, otherwise false.
+     */
+    public function download(string $filespec): bool
     {
-        return $this->filesystem->listContents($directory);
-    }
+        if (!$fileOrDirectory = $this->findLeafObject($filespec)) {
+            throw new \RuntimeException("File not found in read directory: \"$filespec\".");
+        }
 
-    public function download(string $file): string
-    {
-        return $this->filesystem->read($file);
+        if ($this->isDirectory($fileOrDirectory)) {
+            $files = $this->filesystem->listContents($fileOrDirectory);
+        } else {
+            $files = [$this->filesystem->getMetadata($fileOrDirectory)];
+        }
+
+        return from($files)
+            // Only download files. Recursion not supported yet.
+            ->where(static function (array $v): bool {
+                return $v['type'] === self::TYPE_FILE;
+            })
+            ->all(function (array $v): bool {
+                return (bool)file_put_contents($v['name'], $this->filesystem->read($v['path']));
+            })
+        ;
     }
 
     /**
-     * Uploads the specified file to the specified parent directory. If the file already exists it is overwritten.
+     * Uploads the specified file or directory to the specified parent directory. Any existing files are overwritten.
      *
      * @param string $fileSpec Local file.
      * @param string $parent Optional. Parent directory.
@@ -40,15 +68,32 @@ class OnlineStorage
      */
     public function upload(string $fileSpec, string $parent = ''): bool
     {
-        $filename = basename($fileSpec);
+        $directory = $this->createDirectories($parent);
 
-        // Find any existing file.
-        $file = $this->findFile($filename, $parent);
+        if (is_dir($fileSpec)) {
+            $files = from(new \DirectoryIterator($fileSpec))
+                ->where(static function (\DirectoryIterator $iterator): bool {
+                    return $iterator->isFile();
+                })
+                ->select(static function (\DirectoryIterator $iterator): string {
+                    return $iterator->getPathname();
+                })
+            ;
+        } else {
+            $files = [$fileSpec];
+        }
 
-        return $this->filesystem->put(
-            $file['basename'] ?: "$parent/$filename",
-            file_get_contents($fileSpec)
-        );
+        return from($files)->all(function ($filespec) use ($directory): bool {
+            $filename = basename($filespec);
+
+            // Find any existing file.
+            $file = $this->findFile($filename, $directory);
+
+            return $this->filesystem->put(
+                $file['basename'] ?: "$directory/$filename",
+                file_get_contents($filespec)
+            );
+        });
     }
 
     public function delete(string $file): bool
@@ -56,13 +101,23 @@ class OnlineStorage
         return $this->filesystem->delete($file);
     }
 
-    public function makeDirectoryRecursively(string $directories): string
+    /**
+     * Creates one or more directories, separated by a slash ('/'), as required.
+     * If directories already exist, no new directories will be created.
+     *
+     * @param string $directories
+     *
+     * @return string Leaf directory identifier.
+     */
+    public function createDirectories(string $directories): string
     {
-        return $this->makeDirectoryArrayRecursively(explode('/', $directories));
+        return $this->createDirectoriesArray(explode('/', $directories));
     }
 
-    private function makeDirectoryArrayRecursively(array $directories): string
+    private function createDirectoriesArray(array $directories): string
     {
+        $directories = array_merge(explode('/', self::WRITE_DIR), $directories);
+
         $parent = '';
 
         do {
@@ -84,6 +139,21 @@ class OnlineStorage
         return $parent;
     }
 
+    private function isDirectory(string $path): bool
+    {
+        return $this->filesystem->getMetadata($path)['type'] === self::TYPE_DIRECTORY;
+    }
+
+    /**
+     * Finds a file with the specified name within the specified parent of the specified type.
+     * If type is not specified, any type will match.
+     *
+     * @param string $filename File name.
+     * @param string $parent Optional. Parent directory identifier.
+     * @param string|null $type Optional. File type.
+     *
+     * @return array|null File metadata if found, otherwise null.
+     */
     private function find(string $filename, string $parent = '', string $type = null): ?array
     {
         return from($files = $this->filesystem->listContents($parent))
@@ -100,12 +170,34 @@ class OnlineStorage
 
     private function findFile(string $dirName, string $parent = ''): ?array
     {
-        return $this->find($dirName, $parent, 'file');
+        return $this->find($dirName, $parent, self::TYPE_FILE);
     }
 
     private function findDirectory(string $dirName, string $parent = ''): ?array
     {
-        return $this->find($dirName, $parent, 'dir');
+        return $this->find($dirName, $parent, self::TYPE_DIRECTORY);
+    }
+
+    private function findLeafObject(string $filespec): ?string
+    {
+        $directories = array_merge(
+            explode('/', self::READ_DIR),
+            explode('/', $filespec)
+        );
+
+        $parent = '';
+
+        do {
+            $directory = array_shift($directories);
+
+            if (!$response = $this->find($directory, $parent)) {
+                return null;
+            }
+
+            $parent = $response['basename'];
+        } while ($directories);
+
+        return $parent;
     }
 
     public function fetchLatestDatabaseSnapshot(): array
@@ -170,14 +262,14 @@ class OnlineStorage
         ;
 
         $fileInfo = $this->findLatestBuildDatabaseSnapshot($dayDir);
-        $fileInfo['vdir'] = self::ROOT_DIR . "/$yesterdayYearMonth/$yesterdayDay/$fileInfo[vdir]";
+        $fileInfo['vdir'] = self::READ_DIR . "/$yesterdayYearMonth/$yesterdayDay/$fileInfo[vdir]";
 
         return $fileInfo;
     }
 
     private function findRootDir(): string
     {
-        return $this->findDirectory(self::ROOT_DIR)['basename'];
+        return $this->findDirectory(self::READ_DIR)['basename'];
     }
 
     /**
