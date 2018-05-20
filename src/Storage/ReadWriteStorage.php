@@ -37,21 +37,19 @@ class ReadWriteStorage
      */
     public function download(string $filespec): bool
     {
-        if (!$fileOrDirectory = $this->findLeafObject($filespec)) {
+        if (!$fileOrDirectoryPath = $this->findLeafObject($filespec)) {
             throw new \RuntimeException("File not found in read directory: \"$filespec\".");
         }
 
-        if ($this->isDirectory($fileOrDirectory)) {
-            $files = $this->filesystem->listContents($fileOrDirectory);
+        if ($this->isDirectory($fileOrDirectoryPath)) {
+            $files = $this->filesystem->listContents($fileOrDirectoryPath);
         } else {
-            $files = [$this->filesystem->getMetadata($fileOrDirectory)];
+            $files = [$this->filesystem->getMetadata($fileOrDirectoryPath)];
         }
 
         return from($files)
             // Only download files. Recursion not supported yet.
-            ->where(static function (array $v): bool {
-                return $v['type'] === self::TYPE_FILE;
-            })
+            ->where(\Closure::fromCallable([__CLASS__, 'isFile']))
             ->all(function (array $v): bool {
                 return (bool)file_put_contents($v['name'], $this->filesystem->read($v['path']));
             })
@@ -96,6 +94,66 @@ class ReadWriteStorage
         });
     }
 
+    /**
+     * Moves a file or directory from the write root to the read root.
+     *
+     * @param string $filespec File or directory path, separated by slashes ('/').
+     *
+     * @return bool True if all files were moved successfully, otherwise false.
+     */
+    public function moveUploadedFile(string $filespec): bool
+    {
+        if (!$fileOrDirectoryPath = $this->findLeafObject($filespec, self::WRITE_DIR)) {
+            throw new \RuntimeException("Cannot move file \"$filespec\": not found.");
+        }
+
+        $directories = self::filespecToDirectoryList($filespec);
+
+        if ($this->isDirectory($fileOrDirectoryPath)) {
+            $files = $this->filesystem->listContents($fileOrDirectoryPath);
+        } else {
+            $files = [$this->filesystem->getMetadata($fileOrDirectoryPath)];
+
+            // Discard file name.
+            array_pop($directories);
+        }
+
+        // Mirror directory structure at destination.
+        $destinationId = $this->createDirectoriesArray($directories, self::READ_DIR);
+
+        // Move files.
+        if (!from($files)
+            // Only download files. Recursion not supported yet.
+            ->where(\Closure::fromCallable([__CLASS__, 'isFile']))
+            ->all(function (array $v) use ($destinationId): bool {
+                // Find any existing file and delete it.
+                if ($file = $this->findFile($v['name'], $destinationId)) {
+                    // We have to delete because renaming to existing file ID just deletes the source file.
+                    $this->filesystem->delete($file['basename']);
+                }
+
+                return $this->filesystem->rename($v['path'], "$destinationId/$v[name]");
+            })
+        ) {
+            return false;
+        }
+
+        // Remove empty write directories.
+        return from(array_reverse($fileOrDirectoryIds = self::filespecToDirectoryList($fileOrDirectoryPath)))
+            // Skip root directory.
+            ->except([reset($fileOrDirectoryIds)])
+            ->where(function (string $fileOrDirectory) {
+                return !self::isFile($this->filesystem->getMetadata($fileOrDirectory));
+            })
+            ->takeWhile(function (string $directory): bool {
+                return !$this->filesystem->listContents($directory);
+            })
+            ->all(function (string $directory): bool {
+                return $this->filesystem->delete($directory);
+            })
+        ;
+    }
+
     public function delete(string $file): bool
     {
         return $this->filesystem->delete($file);
@@ -111,12 +169,12 @@ class ReadWriteStorage
      */
     public function createDirectories(string $directories): string
     {
-        return $this->createDirectoriesArray(explode('/', $directories));
+        return $this->createDirectoriesArray(self::filespecToDirectoryList($directories));
     }
 
-    private function createDirectoriesArray(array $directories): string
+    private function createDirectoriesArray(array $directories, string $root = null): string
     {
-        $directories = array_merge(explode('/', self::WRITE_DIR), $directories);
+        $directories = array_merge(self::filespecToDirectoryList($root ?? self::WRITE_DIR), $directories);
 
         $parent = '';
 
@@ -178,11 +236,11 @@ class ReadWriteStorage
         return $this->find($dirName, $parent, self::TYPE_DIRECTORY);
     }
 
-    private function findLeafObject(string $filespec): ?string
+    private function findLeafObject(string $filespec, string $root = null): ?string
     {
         $directories = array_merge(
-            explode('/', self::READ_DIR),
-            explode('/', $filespec)
+            self::filespecToDirectoryList($root ?? self::READ_DIR),
+            self::filespecToDirectoryList($filespec)
         );
 
         $parent = '';
@@ -194,7 +252,7 @@ class ReadWriteStorage
                 return null;
             }
 
-            $parent = $response['basename'];
+            $parent = $response['path'];
         } while ($directories);
 
         return $parent;
@@ -292,5 +350,15 @@ class ReadWriteStorage
             })
             ->single() + ['vdir' => $buildDir['filename']]
         ;
+    }
+
+    private static function filespecToDirectoryList(string $filespec): array
+    {
+        return explode('/', $filespec);
+    }
+
+    private static function isFile(array $file): bool
+    {
+        return $file['type'] === self::TYPE_FILE;
     }
 }
