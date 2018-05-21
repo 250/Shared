@@ -13,9 +13,6 @@ use ScriptFUSION\Type\StringType;
  */
 class ReadWriteStorage
 {
-    private const READ_DIR = 'data';
-    private const WRITE_DIR = 'building...';
-
     private const BASENAME = '$v["basename"]';
     private const FILENAME = '$v["filename"]';
 
@@ -39,11 +36,11 @@ class ReadWriteStorage
      *
      * @return bool True if all files were downloaded successfully, otherwise false.
      */
-    public function download(string $filespec): bool
+    public function download(string $filespec, StorageRoot $root): bool
     {
         $this->logger->info("Downloading: \"$filespec\"...");
 
-        if (!$fileOrDirectoryPath = $this->findLeafObject($filespec)) {
+        if (!$fileOrDirectoryPath = $this->findLeafObject($filespec, $root)) {
             throw new \RuntimeException("File not found in read directory: \"$filespec\".");
         }
 
@@ -117,7 +114,7 @@ class ReadWriteStorage
     {
         $this->logger->info("Moving: \"$filespec\"...");
 
-        if (!$fileOrDirectoryPath = $this->findLeafObject($filespec, self::WRITE_DIR)) {
+        if (!$fileOrDirectoryPath = $this->findLeafObject($filespec, StorageRoot::WRITE_DIR)) {
             throw new \RuntimeException("Cannot move file \"$filespec\": not found.");
         }
 
@@ -133,7 +130,7 @@ class ReadWriteStorage
         }
 
         // Mirror directory structure at destination.
-        $destinationId = $this->createDirectoriesArray($directories, self::READ_DIR);
+        $destinationId = $this->createDirectoriesArray($directories, StorageRoot::READ_DIR);
 
         // Move files.
         if (!from($files)
@@ -175,7 +172,7 @@ class ReadWriteStorage
     {
         $this->logger->info("Deleting: \"$file\"...");
 
-        if (!$filePath = $this->findLeafObject($file, self::WRITE_DIR)) {
+        if (!$filePath = $this->findLeafObject($file, StorageRoot::WRITE_DIR)) {
             throw new \RuntimeException("Cannot delete file: \"$file\": not found.");
         }
 
@@ -195,9 +192,12 @@ class ReadWriteStorage
         return $this->createDirectoriesArray(self::filespecToDirectoryList($directories));
     }
 
-    private function createDirectoriesArray(array $directories, string $root = null): string
+    private function createDirectoriesArray(array $directories, StorageRoot $root = null): string
     {
-        $directories = array_merge(self::filespecToDirectoryList($root ?? self::WRITE_DIR), $directories);
+        $directories = array_merge(
+            self::filespecToDirectoryList($root ? $root->getDirectory() : StorageRoot::WRITE_DIR),
+            $directories
+        );
 
         $parent = '';
 
@@ -259,10 +259,10 @@ class ReadWriteStorage
         return $this->find($dirName, $parent, self::TYPE_DIRECTORY);
     }
 
-    private function findLeafObject(string $filespec, string $root = null): ?string
+    private function findLeafObject(string $filespec, StorageRoot $root = null): ?string
     {
         $directories = array_merge(
-            self::filespecToDirectoryList($root ?? self::READ_DIR),
+            self::filespecToDirectoryList($root ? $root->getDirectory() : StorageRoot::READ_DIR),
             self::filespecToDirectoryList($filespec)
         );
 
@@ -343,14 +343,14 @@ class ReadWriteStorage
         ;
 
         $fileInfo = $this->findLatestBuildDatabaseSnapshot($dayDir);
-        $fileInfo['vdir'] = self::READ_DIR . "/$yesterdayYearMonth/$yesterdayDay/$fileInfo[vdir]";
+        $fileInfo['vdir'] = StorageRoot::READ_DIR . "/$yesterdayYearMonth/$yesterdayDay/$fileInfo[vdir]";
 
         return $fileInfo;
     }
 
     private function findRootDir(): string
     {
-        return $this->findDirectory(self::READ_DIR)['basename'];
+        return $this->findDirectory(StorageRoot::READ_DIR)['basename'];
     }
 
     /**
