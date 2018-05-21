@@ -17,7 +17,7 @@ final class UploadCommand extends Command
             ->setName('upload')
             ->setDescription('Uploads a file or directory.')
             ->addArgument('source', InputArgument::REQUIRED, 'Source file or directory.')
-            ->addArgument('destination', InputArgument::OPTIONAL, 'Destination directory.')
+            ->addArgument('destination', InputArgument::OPTIONAL, 'Destination directory.', '')
         ;
     }
 
