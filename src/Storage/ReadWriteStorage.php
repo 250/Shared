@@ -56,8 +56,10 @@ class ReadWriteStorage
         return from($files)
             // Only download files. Recursion not supported yet.
             ->where(\Closure::fromCallable([__CLASS__, 'isFile']))
-            ->all(function (array $v): bool {
-                return (bool)file_put_contents($v['name'], $this->filesystem->read($v['path']));
+            ->all(function (array $file): bool {
+                $this->logger->info("Downloading: \"$file[name]\".");
+
+                return (bool)file_put_contents($file['name'], $this->filesystem->read($file['path']));
             })
         ;
     }
@@ -94,6 +96,8 @@ class ReadWriteStorage
 
             // Find any existing file.
             $file = $this->findFile($filename, $directory);
+
+            $this->logger->info("Uploading: \"$filename\".");
 
             return $this->filesystem->put(
                 $file['basename'] ?: "$directory/$filename",
@@ -135,14 +139,16 @@ class ReadWriteStorage
         if (!from($files)
             // Only download files. Recursion not supported yet.
             ->where(\Closure::fromCallable([__CLASS__, 'isFile']))
-            ->all(function (array $v) use ($destinationId): bool {
+            ->all(function (array $file) use ($destinationId): bool {
                 // Find any existing file and delete it.
-                if ($file = $this->findFile($v['name'], $destinationId)) {
+                if ($destinationFile = $this->findFile($file['name'], $destinationId)) {
                     // We have to delete because renaming to existing file ID just deletes the source file.
-                    $this->filesystem->delete($file['basename']);
+                    $this->filesystem->delete($destinationFile['basename']);
                 }
 
-                return $this->filesystem->rename($v['path'], "$destinationId/$v[name]");
+                $this->logger->info("Moving: \"$file[name]\".");
+
+                return $this->filesystem->rename($file['path'], "$destinationId/$file[name]");
             })
         ) {
             return false;
