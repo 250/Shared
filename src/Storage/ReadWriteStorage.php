@@ -371,6 +371,10 @@ class ReadWriteStorage
 
     private static function filespecToDirectoryList(string $filespec): array
     {
+        if ('' === $filespec) {
+            return [];
+        }
+
         return explode('/', $filespec);
     }
 
