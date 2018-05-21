@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace ScriptFUSION\Steam250\Shared\Storage;
 
 use League\Flysystem\Filesystem;
+use Psr\Log\LoggerInterface;
 use ScriptFUSION\Type\StringType;
 
 /**
@@ -23,9 +24,12 @@ class ReadWriteStorage
 
     private $filesystem;
 
-    public function __construct(Filesystem $filesystem)
+    private $logger;
+
+    public function __construct(Filesystem $filesystem, LoggerInterface $logger)
     {
         $this->filesystem = $filesystem;
+        $this->logger = $logger;
     }
 
     /**
@@ -37,6 +41,8 @@ class ReadWriteStorage
      */
     public function download(string $filespec): bool
     {
+        $this->logger->info("Downloading: \"$filespec\"...");
+
         if (!$fileOrDirectoryPath = $this->findLeafObject($filespec)) {
             throw new \RuntimeException("File not found in read directory: \"$filespec\".");
         }
@@ -66,6 +72,8 @@ class ReadWriteStorage
      */
     public function upload(string $fileSpec, string $parent = ''): bool
     {
+        $this->logger->info("Uploading: \"$fileSpec\"...");
+
         $directory = $this->createDirectories($parent);
 
         if (is_dir($fileSpec)) {
@@ -103,6 +111,8 @@ class ReadWriteStorage
      */
     public function moveUploadedFile(string $filespec): bool
     {
+        $this->logger->info("Moving: \"$filespec\"...");
+
         if (!$fileOrDirectoryPath = $this->findLeafObject($filespec, self::WRITE_DIR)) {
             throw new \RuntimeException("Cannot move file \"$filespec\": not found.");
         }
@@ -157,6 +167,8 @@ class ReadWriteStorage
 
     public function delete(string $file): bool
     {
+        $this->logger->info("Deleting: \"$file\"...");
+
         if (!$filePath = $this->findLeafObject($file, self::WRITE_DIR)) {
             throw new \RuntimeException("Cannot delete file: \"$file\": not found.");
         }

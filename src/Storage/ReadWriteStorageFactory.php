@@ -5,6 +5,7 @@ namespace ScriptFUSION\Steam250\Shared\Storage;
 
 use Hypweb\Flysystem\GoogleDrive\GoogleDriveAdapter;
 use League\Flysystem\Filesystem;
+use ScriptFUSION\Steam250\Shared\Log\LoggerFactory;
 
 final class ReadWriteStorageFactory
 {
@@ -22,7 +23,8 @@ final class ReadWriteStorageFactory
                 new GoogleDriveAdapter(
                     new \Google_Service_Drive($client)
                 )
-            )
+            ),
+            (new LoggerFactory)->create('Storage', false)
         );
     }
 }
