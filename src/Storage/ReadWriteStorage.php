@@ -142,6 +142,7 @@ class ReadWriteStorage
         return from(array_reverse($fileOrDirectoryIds = self::filespecToDirectoryList($fileOrDirectoryPath)))
             // Skip root directory.
             ->except([reset($fileOrDirectoryIds)])
+            // Must skip files otherwise the file we just moved is deleted.
             ->where(function (string $fileOrDirectory) {
                 return !self::isFile($this->filesystem->getMetadata($fileOrDirectory));
             })
@@ -156,7 +157,11 @@ class ReadWriteStorage
 
     public function delete(string $file): bool
     {
-        return $this->filesystem->delete($file);
+        if (!$filePath = $this->findLeafObject($file, self::WRITE_DIR)) {
+            throw new \RuntimeException("Cannot delete file: \"$file\": not found.");
+        }
+
+        return $this->filesystem->delete($filePath);
     }
 
     /**
