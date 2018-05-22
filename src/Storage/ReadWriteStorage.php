@@ -30,18 +30,20 @@ class ReadWriteStorage
     }
 
     /**
-     * Downloads the specified file or directory contents.
+     * Downloads the specified file or directory contents from the specified root directory.
      *
      * @param string $filespec File or directory path, separated by slashes ('/').
+     * @param StorageRoot $root Root directory.
      *
      * @return bool True if all files were downloaded successfully, otherwise false.
+     * @throws \League\Flysystem\FileNotFoundException
      */
     public function download(string $filespec, StorageRoot $root): bool
     {
         $this->logger->info("Downloading: \"$filespec\"...");
 
         if (!$fileOrDirectoryPath = $this->findLeafObject($filespec, $root)) {
-            throw new \RuntimeException("File not found in read directory: \"$filespec\".");
+            throw new \RuntimeException("File not found in {$root->getName()} directory: \"$filespec\".");
         }
 
         if ($this->isDirectory($fileOrDirectoryPath)) {
@@ -114,7 +116,7 @@ class ReadWriteStorage
     {
         $this->logger->info("Moving: \"$filespec\"...");
 
-        if (!$fileOrDirectoryPath = $this->findLeafObject($filespec, StorageRoot::WRITE_DIR)) {
+        if (!$fileOrDirectoryPath = $this->findLeafObject($filespec, StorageRoot::WRITE_DIR())) {
             throw new \RuntimeException("Cannot move file \"$filespec\": not found.");
         }
 
@@ -130,7 +132,7 @@ class ReadWriteStorage
         }
 
         // Mirror directory structure at destination.
-        $destinationId = $this->createDirectoriesArray($directories, StorageRoot::READ_DIR);
+        $destinationId = $this->createDirectoriesArray($directories, StorageRoot::READ_DIR());
 
         // Move files.
         if (!from($files)
@@ -163,6 +165,8 @@ class ReadWriteStorage
                 return !$this->filesystem->listContents($directory);
             })
             ->all(function (string $directory): bool {
+                $this->logger->info("Removing empty directory: \"$directory\".");
+
                 return $this->filesystem->delete($directory);
             })
         ;
@@ -172,11 +176,32 @@ class ReadWriteStorage
     {
         $this->logger->info("Deleting: \"$file\"...");
 
-        if (!$filePath = $this->findLeafObject($file, StorageRoot::WRITE_DIR)) {
+        if (!$filePath = $this->findLeafObject($file, StorageRoot::WRITE_DIR())) {
             throw new \RuntimeException("Cannot delete file: \"$file\": not found.");
         }
 
         return $this->filesystem->delete($filePath);
+    }
+
+    public function deletePattern(string $parent, string $pattern): bool
+    {
+        $this->logger->info("Deleting all files matching pattern: \"$pattern\" in \"$parent\"...");
+
+        if (!$directoryPath = $this->findLeafObject($parent, StorageRoot::WRITE_DIR())) {
+            throw new \RuntimeException("Cannot delete from directory: \"$parent\": no such directory.");
+        }
+
+        return from($this->filesystem->listContents($directoryPath))
+            ->where(\Closure::fromCallable([__CLASS__, 'isFile']))
+            ->where(static function (array $file) use ($pattern): bool {
+                return (bool)preg_match("[$pattern]", $file['name']);
+            })
+            ->all(function (array $file): bool {
+                $this->logger->info("Deleting: \"$file[name]\".");
+
+                return $this->filesystem->delete($file['basename']);
+            })
+        ;
     }
 
     /**
