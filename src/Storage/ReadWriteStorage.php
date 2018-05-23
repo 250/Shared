@@ -204,6 +204,27 @@ class ReadWriteStorage
         ;
     }
 
+    public function downloadLastTwoSnapshots(): void
+    {
+        $today = $this->fetchLatestDatabaseSnapshot();
+        $yesterday = $this->fetchYesterdaysLastDatabaseSnapshot();
+
+        $todayFilename = "$today[vdir].$today[name]";
+        $yesterdayFilename = "$yesterday[vdir].$yesterday[name]";
+
+        foreach ([&$todayFilename, &$yesterdayFilename] as &$filename) {
+            $filename = str_replace('/', '_', $filename);
+        }
+
+        file_put_contents($todayFilename, $this->filesystem->read($today['basename']));
+        file_put_contents($yesterdayFilename, $this->filesystem->read($yesterday['basename']));
+
+        echo
+            " 0:\t$today[vdir]\t$todayFilename\n",
+            "-1:\t$yesterday[vdir]\t$yesterdayFilename\n"
+        ;
+    }
+
     /**
      * Creates one or more directories, separated by a slash ('/'), as required.
      * If directories already exist, no new directories will be created.
@@ -306,7 +327,7 @@ class ReadWriteStorage
         return $parent;
     }
 
-    public function fetchLatestDatabaseSnapshot(): array
+    private function fetchLatestDatabaseSnapshot(): array
     {
         $dataDir = $this->findRootDir();
 
@@ -324,12 +345,12 @@ class ReadWriteStorage
         ;
 
         $fileInfo = $this->findLatestBuildDatabaseSnapshot($dayDir['basename']);
-        $fileInfo['vdir'] = "data/$yearMonthDir[filename]/$dayDir[filename]/$fileInfo[vdir]";
+        $fileInfo['vdir'] = "$yearMonthDir[filename]/$dayDir[filename]/$fileInfo[vdir]";
 
         return $fileInfo;
     }
 
-    public function fetchYesterdaysLastDatabaseSnapshot(): array
+    private function fetchYesterdaysLastDatabaseSnapshot(): array
     {
         $dataDir = $this->findRootDir();
 
@@ -368,7 +389,7 @@ class ReadWriteStorage
         ;
 
         $fileInfo = $this->findLatestBuildDatabaseSnapshot($dayDir);
-        $fileInfo['vdir'] = StorageRoot::READ_DIR . "/$yesterdayYearMonth/$yesterdayDay/$fileInfo[vdir]";
+        $fileInfo['vdir'] = "$yesterdayYearMonth/$yesterdayDay/$fileInfo[vdir]";
 
         return $fileInfo;
     }

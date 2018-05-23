@@ -5,6 +5,7 @@ namespace ScriptFUSION\Steam250\Shared;
 
 use ScriptFUSION\Steam250\Shared\Command\DeleteCommand;
 use ScriptFUSION\Steam250\Shared\Command\DownloadCommand;
+use ScriptFUSION\Steam250\Shared\Command\DownloadLastTwoCommand;
 use ScriptFUSION\Steam250\Shared\Command\MoveCommand;
 use ScriptFUSION\Steam250\Shared\Command\UploadCommand;
 
@@ -21,6 +22,7 @@ final class Application
             new UploadCommand,
             new MoveCommand,
             new DeleteCommand,
+            new DownloadLastTwoCommand,
         ]);
     }
 
