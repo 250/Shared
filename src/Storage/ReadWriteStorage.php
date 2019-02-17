@@ -207,7 +207,7 @@ class ReadWriteStorage
     public function downloadLastTwoSnapshots(): void
     {
         $today = $this->fetchLatestDatabaseSnapshot();
-        $yesterday = $this->fetchYesterdaysLastDatabaseSnapshot();
+        $yesterday = $this->fetchPreviousDatabaseSnapshot();
 
         $todayFilename = "$today[vdir].$today[name]";
         $yesterdayFilename = "$yesterday[vdir].$yesterday[name]";
@@ -350,7 +350,13 @@ class ReadWriteStorage
         return $fileInfo;
     }
 
-    private function fetchYesterdaysLastDatabaseSnapshot(): array
+    /**
+     * Fetches the previous database snapshot by searching the previous seven days' snapshot folders for the latest
+     * snapshot in each. Typically it will find the latest snapshot from yesterday, unless the build was missed.
+     *
+     * @return array Database snapshot file information.
+     */
+    private function fetchPreviousDatabaseSnapshot(): array
     {
         $dataDir = $this->findRootDir();
 
@@ -368,7 +374,10 @@ class ReadWriteStorage
             ->first()
         ;
 
-        $yesterday = new \DateTimeImmutable("$yearMonthData[filename]$day -1day");
+        $tries = 1;
+        retry:
+
+        $yesterday = new \DateTimeImmutable("$yearMonthData[filename]$day -$tries day");
         $yesterdayYearMonth = $yesterday->format('Ym');
         $yesterdayDay = $yesterday->format('d');
 
@@ -377,16 +386,24 @@ class ReadWriteStorage
                 return $v['filename'] === $yesterdayYearMonth;
             })
             ->select(self::BASENAME)
-            ->single()
-        ;
+            ->single();
 
-        $dayDir = from($files = $this->filesystem->listContents($yearMonthDir))
-            ->where(static function (array $v) use ($yesterdayDay): bool {
-                return $v['filename'] === $yesterdayDay;
-            })
-            ->select(self::BASENAME)
-            ->first()
-        ;
+        try {
+            $dayDir = from($files = $this->filesystem->listContents($yearMonthDir))
+                ->where(static function (array $v) use ($yesterdayDay): bool {
+                    return $v['filename'] === $yesterdayDay;
+                })
+                ->select(self::BASENAME)
+                ->first();
+        } catch (\UnexpectedValueException $exception) {
+            if ($tries++ <= 7) {
+                fwrite(STDERR, "No match for $yesterdayYearMonth/$yesterdayDay...\n");
+
+                goto retry;
+            }
+
+            throw $exception;
+        }
 
         $fileInfo = $this->findLatestBuildDatabaseSnapshot($dayDir);
         $fileInfo['vdir'] = "$yesterdayYearMonth/$yesterdayDay/$fileInfo[vdir]";
