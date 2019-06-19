@@ -15,4 +15,5 @@ final class Platform
     public const VIVE    = 1 << 3;
     public const OCULUS  = 1 << 4;
     public const WMR     = 1 << 5;
+    public const INDEX   = 1 << 6;
 }
