@@ -21,7 +21,12 @@ final class ReadWriteStorageFactory
         return new ReadWriteStorage(
             new Filesystem(
                 new GoogleDriveAdapter(
-                    new \Google_Service_Drive($client)
+                    new \Google_Service_Drive($client),
+                    null,
+                    [
+                        // Permanently delete files instead of moving to trash.
+                        'deleteAction' => 'delete',
+                    ]
                 )
             ),
             (new LoggerFactory)->create('Storage', false)
