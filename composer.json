@@ -9,18 +9,22 @@
     ],
     "require": {
         "php": "^7.1",
-        "nao-pon/flysystem-google-drive": "^1.1.9",
+        "async/throttle": "^2",
         "athari/yalinqo": "^2",
-        "phptype/string": "^1",
-        "symfony/console": "^3",
-        "monolog/monolog": "^1",
         "eloquent/enumeration": "^5",
-        "scriptfusion/static-class": "^1"
+        "monolog/monolog": "^1",
+        "nao-pon/flysystem-google-drive": "^1.1.9",
+        "phptype/string": "^1",
+        "scriptfusion/static-class": "^1",
+        "symfony/console": "^3"
     },
     "autoload": {
         "psr-4": {
             "ScriptFUSION\\Steam250\\Shared\\": "src"
         }
     },
-    "bin": ["bin/250 data"]
+    "bin": ["bin/250 data"],
+    "config": {
+        "sort-packages": true
+    }
 }

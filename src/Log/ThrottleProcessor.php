@@ -12,7 +12,7 @@ final class ThrottleProcessor
         $throttle = $record['context']['throttle'] ?? null;
 
         if ($throttle instanceof Throttle) {
-            $record['message'] .= " AR: {$throttle->getActive()}";
+            $record['message'] .= " AR: {$throttle->countAwaiting()}";
         }
 
         return $record;
