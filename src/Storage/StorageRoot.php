@@ -6,8 +6,8 @@ namespace ScriptFUSION\Steam250\Shared\Storage;
 use Eloquent\Enumeration\AbstractEnumeration;
 
 /**
- * @method static READ_DIR()
- * @method static WRITE_DIR()
+ * @method static self READ_DIR
+ * @method static self WRITE_DIR
  */
 final class StorageRoot extends AbstractEnumeration
 {

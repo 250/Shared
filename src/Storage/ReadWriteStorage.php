@@ -36,7 +36,6 @@ class ReadWriteStorage
      * @param StorageRoot $root Root directory.
      *
      * @return bool True if all files were downloaded successfully, otherwise false.
-     * @throws \League\Flysystem\FileNotFoundException
      */
     public function download(string $filespec, StorageRoot $root): bool
     {
