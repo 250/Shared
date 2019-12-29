@@ -9,6 +9,7 @@
     ],
     "require": {
         "php": "^7.1",
+        "scriptfusion/mapper": "^2",
         "scriptfusion/static-class": "^1"
     },
     "autoload": {
