@@ -1,6 +1,6 @@
 {
     "name": "250/shared",
-    "description": "Top 250 shared code library.",
+    "description": "Club 250 shared code library.",
     "authors": [
         {
             "name": "Bilge",
@@ -9,21 +9,13 @@
     ],
     "require": {
         "php": "^7.1",
-        "async/throttle": "^2",
-        "athari/yalinqo": "^2",
-        "eloquent/enumeration": "^5",
-        "monolog/monolog": "^1",
-        "nao-pon/flysystem-google-drive": "^1.1.9",
-        "phptype/string": "^1",
-        "scriptfusion/static-class": "^1",
-        "symfony/console": "^3|^4|^5"
+        "scriptfusion/static-class": "^1"
     },
     "autoload": {
         "psr-4": {
             "ScriptFUSION\\Steam250\\Shared\\": "src"
         }
     },
-    "bin": ["bin/250 data"],
     "config": {
         "sort-packages": true
     }
