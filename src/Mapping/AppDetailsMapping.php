@@ -34,13 +34,7 @@ class AppDetailsMapping extends Mapping
             'videos' => new Join(',', new Copy('videos')),
             'ea' => new Callback(
                 static function (array $data): int {
-                    foreach ($data['tags'] as $tag) {
-                        if ($tag['name'] === 'Early Access' && !isset($tag['browseable'])) {
-                            return 1;
-                        }
-                    }
-
-                    return 0;
+                    return (int)in_array('Early Access', $data['genres'], true);
                 }
             ),
             'positive_reviews' => new Copy('positive_reviews'),
