@@ -7,12 +7,22 @@ use ScriptFUSION\Mapper\DataType;
 use ScriptFUSION\Mapper\Mapping;
 use ScriptFUSION\Mapper\Strategy\Callback;
 use ScriptFUSION\Mapper\Strategy\Copy;
+use ScriptFUSION\Mapper\Strategy\IfElse;
 use ScriptFUSION\Mapper\Strategy\Join;
 use ScriptFUSION\Mapper\Strategy\Type;
 use ScriptFUSION\Steam250\Shared\Platform;
 
 class AppDetailsMapping extends Mapping
 {
+    private int $appId;
+
+    public function __construct(int $appId)
+    {
+        $this->appId = $appId;
+
+        parent::__construct();
+    }
+
     protected function createMapping()
     {
         return [
@@ -59,6 +69,7 @@ class AppDetailsMapping extends Mapping
                     return $platforms;
                 }
             ),
+            'alias' => new IfElse(fn ($data) => $data['canonical_id'] !== $this->appId, 1, 0),
         ];
     }
 }
