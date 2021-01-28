@@ -69,6 +69,10 @@ class AppDetailsMapping extends Mapping
                     return $platforms;
                 }
             ),
+            'parent_id' => new IfElse(
+                fn ($data) => $data['app_id'] !== $this->appId,
+                new Copy('app_id')
+            ),
             'alias' => new IfElse(fn ($data) => $data['canonical_id'] !== $this->appId, 1, 0),
         ];
     }
