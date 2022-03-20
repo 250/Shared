@@ -70,6 +70,9 @@ class AppDetailsMapping extends Mapping
                     return $platforms;
                 }
             ),
+            'steam_deck' => new Callback(
+                static fn (array $data): ?int => isset($data['steam_deck']) ? $data['steam_deck']->toId() : null
+            ),
             'parent_id' => new IfElse(
                 fn ($data) => $data['app_id'] !== $this->appId,
                 new Copy('app_id')
