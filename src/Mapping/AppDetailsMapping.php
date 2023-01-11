@@ -62,10 +62,6 @@ class AppDetailsMapping extends Mapping
                     $data['windows'] && $platforms |= Platform::WINDOWS;
                     $data['linux'] && $platforms |= Platform::LINUX;
                     $data['mac'] && $platforms |= Platform::MAC;
-                    $data['vive'] && $platforms |= Platform::VIVE;
-                    $data['oculus'] && $platforms |= Platform::OCULUS;
-                    $data['wmr'] && $platforms |= Platform::WMR;
-                    $data['valve_index'] && $platforms |= Platform::INDEX;
 
                     return $platforms;
                 }
