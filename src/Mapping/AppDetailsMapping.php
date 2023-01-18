@@ -74,6 +74,7 @@ class AppDetailsMapping extends Mapping
                 new Copy('app_id')
             ),
             'alias' => new IfElse(fn ($data) => $data['canonical_id'] !== $this->appId, 1, 0),
+            'demo_id' => new Copy('demo_id'),
         ];
     }
 }
