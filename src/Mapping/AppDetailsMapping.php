@@ -9,6 +9,7 @@ use ScriptFUSION\Mapper\Strategy\Callback;
 use ScriptFUSION\Mapper\Strategy\Copy;
 use ScriptFUSION\Mapper\Strategy\IfElse;
 use ScriptFUSION\Mapper\Strategy\Join;
+use ScriptFUSION\Mapper\Strategy\Regex;
 use ScriptFUSION\Mapper\Strategy\Type;
 use ScriptFUSION\Steam250\Shared\Platform;
 
@@ -75,7 +76,8 @@ class AppDetailsMapping extends Mapping
             ),
             'alias' => new IfElse(fn ($data) => $data['canonical_id'] !== $this->appId, 1, 0),
             'demo_id' => new Copy('demo_id'),
-            'capsule_hash' => new Copy('capsule_hash'),
+            'capsule_hash' => new Regex(new Copy('capsule_url'), '[/([\da-f]{40})/]', 1),
+            'capsule_alt' => new Regex(new Copy('capsule_url'), '[_alt_assets_(\d+)\.]', 1),
         ];
     }
 }
