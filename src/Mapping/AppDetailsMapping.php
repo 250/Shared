@@ -6,6 +6,7 @@ namespace ScriptFUSION\Steam250\Shared\Mapping;
 use ScriptFUSION\Mapper\DataType;
 use ScriptFUSION\Mapper\Mapping;
 use ScriptFUSION\Mapper\Strategy\Callback;
+use ScriptFUSION\Mapper\Strategy\Collection;
 use ScriptFUSION\Mapper\Strategy\Copy;
 use ScriptFUSION\Mapper\Strategy\IfElse;
 use ScriptFUSION\Mapper\Strategy\Join;
@@ -42,7 +43,16 @@ class AppDetailsMapping extends Mapping
             'discount' => new Copy('discount'),
             'vrx' => new Type(DataType::INTEGER(), new Copy('vrx')),
             'free' => new Type(DataType::INTEGER(), new Copy('free')),
-            'videos' => new Join(',', new Copy('videos')),
+            'videos' => new Join(
+                ',',
+                new Collection(
+                    new Copy('videos'),
+                    new Callback(
+                        static fn ($_, string $url): string =>
+                            preg_replace('[.*/steam/apps/(\d++)/([\da-z]{40}(?=/))?+.*]', '$2$1', $url)
+                    ),
+                ),
+            ),
             'ea' => new Callback(
                 static function (array $data): int {
                     return (int)in_array('Early Access', $data['genres'], true);
