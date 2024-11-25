@@ -41,8 +41,8 @@ class AppDetailsMapping extends Mapping
             'price' => new Copy('price'),
             'discount_price' => new Copy('discount_price'),
             'discount' => new Copy('discount'),
-            'vrx' => new Type(DataType::INTEGER(), new Copy('vrx')),
-            'free' => new Type(DataType::INTEGER(), new Copy('free')),
+            'vrx' => new Type(DataType::Integer, new Copy('vrx')),
+            'free' => new Type(DataType::Integer, new Copy('free')),
             'videos' => new Join(
                 ',',
                 new Collection(
@@ -58,7 +58,7 @@ class AppDetailsMapping extends Mapping
                     return (int)in_array('Early Access', $data['genres'], true);
                 }
             ),
-            'adult' => new Type(DataType::INTEGER(), new Copy('adult')),
+            'adult' => new Type(DataType::Integer, new Copy('adult')),
             'positive_reviews' => new Copy('positive_reviews'),
             'negative_reviews' => new Copy('negative_reviews'),
             'total_reviews' => new Callback(
