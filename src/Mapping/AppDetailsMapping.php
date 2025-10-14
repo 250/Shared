@@ -8,6 +8,7 @@ use ScriptFUSION\Mapper\Mapping;
 use ScriptFUSION\Mapper\Strategy\Callback;
 use ScriptFUSION\Mapper\Strategy\Collection;
 use ScriptFUSION\Mapper\Strategy\Copy;
+use ScriptFUSION\Mapper\Strategy\CopyContext;
 use ScriptFUSION\Mapper\Strategy\IfElse;
 use ScriptFUSION\Mapper\Strategy\Join;
 use ScriptFUSION\Mapper\Strategy\Regex;
@@ -48,9 +49,16 @@ class AppDetailsMapping extends Mapping
                 new Collection(
                     new Copy('videos'),
                     new Callback(
-                        static fn ($_, string $url): string =>
-                            preg_replace('[.*/steam/apps/(\d++)/([\da-z]{40}(?=/))?+.*]', '$2$1', $url)
+                        static fn ($_, array $video): string =>
+                        preg_replace('[.*/steam/apps/(\d++)/([\da-z]{40}(?=/))?+.*]', '$2$1', $video['screenshot'])
                     ),
+                ),
+            ),
+            'video_manifest_hashes' => new Join(
+                ',',
+                new Collection(
+                    new Copy('videos'),
+                    new Regex(new CopyContext('hlsManifest'), '[/store_trailers/\d+/(.+)/]', 1)
                 ),
             ),
             'ea' => new Callback(
