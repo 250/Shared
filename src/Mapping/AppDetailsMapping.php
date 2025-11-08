@@ -50,7 +50,7 @@ class AppDetailsMapping extends Mapping
                     new Copy('videos'),
                     new Callback(
                         static fn ($_, array $video): string =>
-                        preg_replace('[.*/steam/apps/(\d++)/([\da-z]{40}(?=/))?+.*]', '$2$1', $video['screenshot'])
+                        preg_replace('[.*/steam/apps/(\d++)/([\da-z]{40}(?=/))?+.*]', '$2$1', $video['thumbnail'])
                     ),
                 ),
             ),
